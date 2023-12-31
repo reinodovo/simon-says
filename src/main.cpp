@@ -1,36 +1,104 @@
 #include <Arduino.h>
-#include <PuzzleModule.h>
+#include <puzzle_module.h>
+#include <rules.h>
+#include <sequence.h>
+#include <utils/button.h>
 
-const int redPin = 22, greenPin = 23;
-const int COLORS = 4;
-const int COLOR_LED_PINS[COLORS] = {5, 19, 16, 15};
+const int RED_PIN = 22, GREEN_PIN = 23;
+const int BUTTON_PINS[COLORS] = {2, 18, 17, 21};
+Button buttons[COLORS];
 
-void onSeed(int seed)
-{
+const int MIN_SEQ = 3, MAX_SEQ = 5;
+
+Rules rules;
+std::vector<Colors> sequence;
+int inputSequenceLength, inputSequenceIndex;
+
+void generateSequence() {
+  sequence.clear();
+  int length = random(MIN_SEQ, MAX_SEQ + 1);
+  for (int i = 0; i < length; i++)
+    sequence.push_back((Colors)(random(0, COLORS)));
+  inputSequenceLength = inputSequenceIndex = 0;
+  Sequence::sequence = sequence;
+  Sequence::size = inputSequenceLength + 1;
 }
 
-void setup()
-{
-  for (int i = 0; i < COLORS; i++)
-  {
-    pinMode(COLOR_LED_PINS[i], OUTPUT);
-    digitalWrite(COLOR_LED_PINS[i], LOW);
+void start() {
+  generateSequence();
+  Sequence::enabled = true;
+  Sequence::stop();
+}
+
+void restart() {
+  Sequence::enabled = false;
+  Sequence::clear();
+}
+
+void onManualCode(int code) { rules = generateRules(code); }
+
+struct ButtonFunction {
+  Colors color;
+  ButtonFunction(Colors color) : color(color) {}
+  void operator()(ButtonState newState, ButtonState _) const {
+    if (newState != Pressed)
+      return;
+    Sequence::stop();
+    Sequence::startInput();
+    Sequence::show(color);
+    PuzzleModule::withBombInfo([this](BombInfo info) {
+      Colors sequenceColor = sequence[inputSequenceIndex];
+      ColorShuffle correctShuffle = info.solved_puzzle_modules % 2 == 0
+                                        ? rules.evenSolvedModules[info.strikes]
+                                        : rules.oddSolvedModules[info.strikes];
+      Colors expected = correctShuffle[sequenceColor];
+      if (expected != color) {
+        PuzzleModule::strike();
+        generateSequence();
+        return;
+      }
+      inputSequenceIndex++;
+      if (inputSequenceIndex <= inputSequenceLength)
+        return;
+      inputSequenceLength++;
+      inputSequenceIndex = 0;
+      Sequence::size = inputSequenceLength + 1;
+      Sequence::stopInput();
+      if (inputSequenceLength == sequence.size()) {
+        Sequence::enabled = false;
+        PuzzleModule::solve();
+      }
+    });
   }
+};
 
-  PuzzleModule::StatusLight statusLight;
-  statusLight.init(redPin, greenPin);
+void setup() {
+  PuzzleModule::onStart = start;
+  PuzzleModule::onRestart = restart;
+  PuzzleModule::onManualCode = onManualCode;
 
-  if (!PuzzleModule::init(statusLight, onSeed))
+  if (!PuzzleModule::setup(
+          PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false)))
     ESP.restart();
+
+  for (int i = 0; i < COLORS; i++) {
+    buttons[i] = Button(BUTTON_PINS[i]);
+    buttons[i].onStateChange = ButtonFunction((Colors)i);
+  }
+
+  Sequence::setup();
+  Sequence::enabled = false;
 }
 
-void loop()
-{
-  for (int i = 0; i < COLORS; i++)
-  {
-    digitalWrite(COLOR_LED_PINS[i], HIGH);
-    delay(200);
-    digitalWrite(COLOR_LED_PINS[i], LOW);
-    delay(200);
+void loop() {
+  PuzzleModule::update();
+  Sequence::update();
+  if (PuzzleModule::status() == PuzzleModule::ModuleStatus::Started)
+    Sequence::enabled = true;
+  if (PuzzleModule::status() == PuzzleModule::ModuleStatus::Solved) {
+    Sequence::enabled = false;
+    return;
   }
+  for (int i = 0; i < COLORS; i++)
+    buttons[i].update();
 }
