@@ -46,7 +46,7 @@ struct ButtonFunction {
     Sequence::stop();
     Sequence::startInput();
     Sequence::show(color);
-    PuzzleModule::withBombInfo([this](BombInfo info) {
+    Module::withBombInfo([this](BombInfo info) {
       Colors sequenceColor = sequence[inputSequenceIndex];
       ColorShuffle correctShuffle = info.solved_puzzle_modules % 2 == 0
                                         ? rules.evenSolvedModules[info.strikes]
@@ -73,12 +73,12 @@ struct ButtonFunction {
 };
 
 void setup() {
-  PuzzleModule::onStart = start;
-  PuzzleModule::onRestart = restart;
-  PuzzleModule::onManualCode = onManualCode;
+  Module::onStart = start;
+  Module::onRestart = restart;
+  Module::onManualCode = onManualCode;
 
   if (!PuzzleModule::setup(
-          PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false)))
+          "Simon Says", PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false)))
     ESP.restart();
 
   for (int i = 0; i < COLORS; i++) {
@@ -93,9 +93,9 @@ void setup() {
 void loop() {
   PuzzleModule::update();
   Sequence::update();
-  if (PuzzleModule::status() == PuzzleModule::ModuleStatus::Started)
+  if (Module::status() == Module::Status::Started)
     Sequence::enabled = true;
-  if (PuzzleModule::status() == PuzzleModule::ModuleStatus::Solved) {
+  if (Module::status() == Module::Status::Solved) {
     Sequence::enabled = false;
     return;
   }
