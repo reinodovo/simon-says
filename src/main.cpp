@@ -73,12 +73,15 @@ struct ButtonFunction {
 };
 
 void setup() {
+  Module::name = "Simon Says";
   Module::onStart = start;
   Module::onRestart = restart;
   Module::onManualCode = onManualCode;
 
-  if (!PuzzleModule::setup(
-          "Simon Says", PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false)))
+  PuzzleModule::statusLight =
+      PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false);
+
+  if (!PuzzleModule::setup())
     ESP.restart();
 
   for (int i = 0; i < COLORS; i++) {
