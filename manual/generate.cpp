@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   manual::json data =
       manual::init("Simon Says", "Simon Says",
                    "This is like one of those toys you played with as a kid "
-                   "where you have to match the"
+                   "where you have to match the "
                    "pattern that appears, except this one is a knockoff that "
                    "was probably purchased at a dollar store.",
                    APP_VERSION);
