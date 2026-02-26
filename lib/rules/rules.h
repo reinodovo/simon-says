@@ -9,10 +9,10 @@ enum Colors { Red, Blue, Green, Yellow };
 
 using ColorShuffle = std::vector<Colors>;
 struct Rules {
-  std::vector<ColorShuffle> evenSolvedModules;
-  std::vector<ColorShuffle> oddSolvedModules;
+  std::vector<ColorShuffle> even_solved_modules;
+  std::vector<ColorShuffle> odd_solved_modules;
 };
 
-Rules generateRules(int seed);
+Rules generate_rules(int seed);
 
-#endif // RULES_H
+#endif  // RULES_H

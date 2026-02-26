@@ -1,7 +1,10 @@
 #include <Arduino.h>
-#include <puzzle_module.h>
+#include <modules/puzzle_module.h>
 #include <rules.h>
+
 #include <vector>
+
+using StrikeCallback = std::function<void()>;
 
 namespace Sequence {
 const int DURATION = 200;
@@ -13,13 +16,15 @@ unsigned long sequence_start_time = 0, stop_time = 0;
 std::vector<Colors> sequence;
 int size = 0;
 bool enabled = false;
-bool isInputing = false;
+bool is_inputting = false;
+StrikeCallback strike_callback;
 
 const int BUZZER_PIN = 13;
 const int COLOR_LED_PINS[COLORS] = {15, 5, 16, 19};
 const int COLOR_FREQUENCIES[COLORS] = {329, 440, 554, 659};
 
-void setup() {
+void setup(StrikeCallback cb) {
+  strike_callback = cb;
   for (int i = 0; i < COLORS; i++) {
     pinMode(COLOR_LED_PINS[i], OUTPUT);
     digitalWrite(COLOR_LED_PINS[i], LOW);
@@ -30,25 +35,23 @@ void setup() {
 
 void clear() {
   noTone(BUZZER_PIN);
-  for (int i = 0; i < COLORS; i++)
-    digitalWrite(COLOR_LED_PINS[i], LOW);
+  for (int i = 0; i < COLORS; i++) digitalWrite(COLOR_LED_PINS[i], LOW);
 }
 
-void stop() {
+void start_input() { is_inputting = true; }
+
+void stop_input() { is_inputting = false; }
+
+void restart_timer() {
   clear();
   sequence_start_time = millis() + SEQUENCE_GAP;
 }
-
-void startInput() { isInputing = true; }
-
-void stopInput() { isInputing = false; }
 
 void start() { sequence_start_time = millis(); }
 
 void show(Colors color) {
   clear();
-  if (!enabled)
-    return;
+  if (!enabled) return;
   tone(BUZZER_PIN, 4 * COLOR_FREQUENCIES[color]);
   digitalWrite(COLOR_LED_PINS[color], HIGH);
   stop_time = millis() + DURATION;
@@ -59,25 +62,22 @@ void update() {
     clear();
     stop_time = -1;
   }
-  if (sequence_start_time > millis())
-    return;
-  if (isInputing) {
-    PuzzleModule::strike();
-    isInputing = false;
+  if (sequence_start_time > millis()) return;
+  if (is_inputting) {
+    // sequence restarted before entire sequence was given, this counts as a strike
+    strike_callback();
+    is_inputting = false;
   }
   unsigned long time_diff = millis() - sequence_start_time;
   int index = (time_diff / (DURATION + COLOR_GAP));
-  if (index >= size)
-    return;
+  if (index >= size) return;
   bool on = time_diff % (DURATION + COLOR_GAP) <= DURATION;
-  if (last_on == on)
-    return;
+  if (last_on == on) return;
   last_on = on;
-  if (on)
-    show(sequence[index]);
+  if (on) show(sequence[index]);
   if (index + 1 == size && !on) {
-    stop();
+    restart_timer();
     return;
   }
 }
-}; // namespace Sequence
+};  // namespace Sequence

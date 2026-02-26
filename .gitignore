@@ -4,4 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 manual/data/*
+*.zip
+*.hash
+*.bin
 *.stl

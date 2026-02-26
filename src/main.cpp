@@ -1,10 +1,12 @@
 #include <Arduino.h>
-#include <puzzle_module.h>
+#include <modules/puzzle_module.h>
 #include <rules.h>
 #include <sequence.h>
 #include <utils/button.h>
 
 const int RED_PIN = 22, GREEN_PIN = 23;
+PuzzleModule module(StatusLight(RED_PIN, GREEN_PIN, StatusLightType::CommonCathode));
+
 const int BUTTON_PINS[COLORS] = {2, 18, 17, 21};
 Button buttons[COLORS];
 
@@ -12,22 +14,21 @@ const int MIN_SEQ = 3, MAX_SEQ = 5;
 
 Rules rules;
 std::vector<Colors> sequence;
-int inputSequenceLength, inputSequenceIndex;
+int input_sequence_length, input_sequence_index;
 
-void generateSequence() {
+void generate_sequence() {
   sequence.clear();
   int length = random(MIN_SEQ, MAX_SEQ + 1);
-  for (int i = 0; i < length; i++)
-    sequence.push_back((Colors)(random(0, COLORS)));
-  inputSequenceLength = inputSequenceIndex = 0;
+  for (int i = 0; i < length; i++) sequence.push_back((Colors)(random(0, COLORS)));
+  input_sequence_length = input_sequence_index = 0;
   Sequence::sequence = sequence;
-  Sequence::size = inputSequenceLength + 1;
+  Sequence::size = input_sequence_length + 1;
 }
 
 void start() {
-  generateSequence();
+  generate_sequence();
   Sequence::enabled = true;
-  Sequence::stop();
+  Sequence::restart_timer();
 }
 
 void restart() {
@@ -35,73 +36,66 @@ void restart() {
   Sequence::clear();
 }
 
-void onManualCode(int code) { rules = generateRules(code); }
+void on_manual_code(int code) { rules = generate_rules(code); }
 
 struct ButtonFunction {
   Colors color;
   ButtonFunction(Colors color) : color(color) {}
-  void operator()(ButtonState newState, ButtonState _) const {
-    if (newState != Pressed)
-      return;
-    Sequence::stop();
-    Sequence::startInput();
+  void operator()(ButtonState new_state, ButtonState _) const {
+    if (new_state != Pressed) return;
+    Sequence::restart_timer();
+    Sequence::start_input();
     Sequence::show(color);
-    Module::withBombInfo([this](BombInfo info) {
-      Colors sequenceColor = sequence[inputSequenceIndex];
-      ColorShuffle correctShuffle = info.solved_puzzle_modules % 2 == 0
-                                        ? rules.evenSolvedModules[info.strikes]
-                                        : rules.oddSolvedModules[info.strikes];
-      Colors expected = correctShuffle[sequenceColor];
+    module.with_bomb_info([this](const BombInfo& info) {
+      Colors sequence_color = sequence[input_sequence_index];
+      ColorShuffle correct_shuffle = info.solved_puzzle_modules % 2 == 0 ? rules.even_solved_modules[info.strikes]
+                                                                         : rules.odd_solved_modules[info.strikes];
+      Colors expected = correct_shuffle[sequence_color];
       if (expected != color) {
-        PuzzleModule::strike();
-        generateSequence();
+        module.strike();
+        Sequence::stop_input();
+        generate_sequence();
         return;
       }
-      inputSequenceIndex++;
-      if (inputSequenceIndex <= inputSequenceLength)
-        return;
-      inputSequenceLength++;
-      inputSequenceIndex = 0;
-      Sequence::size = inputSequenceLength + 1;
-      Sequence::stopInput();
-      if (inputSequenceLength == sequence.size()) {
+      input_sequence_index++;
+      if (input_sequence_index <= input_sequence_length) return;
+      input_sequence_length++;
+      input_sequence_index = 0;
+      Sequence::size = input_sequence_length + 1;
+      Sequence::stop_input();
+      if (input_sequence_length == sequence.size()) {
         Sequence::enabled = false;
-        PuzzleModule::solve();
+        module.solve();
       }
     });
   }
 };
 
 void setup() {
-  Module::name = "Simon Says";
-  Module::onStart = start;
-  Module::onRestart = restart;
-  Module::onManualCode = onManualCode;
+  module.on_start(start);
+  module.on_reset(restart);
+  module.on_manual_code(on_manual_code);
 
-  PuzzleModule::statusLight =
-      PuzzleModule::StatusLight(RED_PIN, GREEN_PIN, false);
-
-  if (!PuzzleModule::setup())
-    ESP.restart();
+  if (!module.setup()) ESP.restart();
 
   for (int i = 0; i < COLORS; i++) {
     buttons[i] = Button(BUTTON_PINS[i]);
-    buttons[i].onStateChange = ButtonFunction((Colors)i);
+    buttons[i].on_state_change(ButtonFunction((Colors)i));
   }
 
-  Sequence::setup();
+  Sequence::setup([]() {
+    module.strike();
+  });
   Sequence::enabled = false;
 }
 
 void loop() {
-  PuzzleModule::update();
+  module.update();
   Sequence::update();
-  if (Module::status() == Module::Status::Started)
-    Sequence::enabled = true;
-  if (Module::status() == Module::Status::Solved) {
+  if (module.get_state() == PuzzleModuleState::Started) Sequence::enabled = true;
+  if (module.get_state() == PuzzleModuleState::Solved) {
     Sequence::enabled = false;
     return;
   }
-  for (int i = 0; i < COLORS; i++)
-    buttons[i].update();
+  for (int i = 0; i < COLORS; i++) buttons[i].update();
 }
