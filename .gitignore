@@ -5,6 +5,6 @@
 .vscode/ipch
 manual/data/*
 *.zip
-*.hash
+*.sha256
 *.bin
 *.stl
