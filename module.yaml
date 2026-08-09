@@ -1,5 +1,7 @@
-name: "Simon Says"
-repo: "reinodovo/simon-says"
+name: Simon Says
+repo: reinodovo/simon-says
 versions:
   firmware: 0.4.0
-  manual: 0.1.0
+  manual: 0.0.0
+  hardware: 0.0.0
+  models: 0.0.0
