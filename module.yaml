@@ -1,0 +1,5 @@
+name: "Simon Says"
+repo: "reinodovo/simon-says"
+versions:
+  firmware: 0.4.0
+  manual: 0.1.0
