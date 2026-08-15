@@ -1,0 +1,58 @@
+{
+	"folders": [
+		{
+			"name": "simon-says",
+			"path": "."
+		},
+		{
+			"name": "firmware",
+			"path": "firmware"
+		},
+		{
+			"name": "manual",
+			"path": "manual"
+		}
+	],
+	"settings": {
+		"python.defaultInterpreterPath": "${workspaceFolder:simon-says}/models/.venv/bin/python",
+		"[c]": {
+			"editor.defaultFormatter": "xaver.clang-format",
+			"editor.formatOnSave": true
+		},
+		"[cpp]": {
+			"editor.defaultFormatter": "xaver.clang-format",
+			"editor.formatOnSave": true
+		},
+		"[python]": {
+			"editor.defaultFormatter": "charliermarsh.ruff",
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports.ruff": "explicit"
+			}
+		}
+	},
+	"extensions": {
+		"recommendations": ["platformio.platformio-ide", "bernhard-42.ocp-cad-viewer", "xaver.clang-format", "charliermarsh.ruff"],
+		"unwantedRecommendations": ["ms-vscode.cpptools-extension-pack"]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Setup models venv",
+				"type": "shell",
+				"command": "test -d models/.venv || (uv venv models/.venv && uv pip install --python models/.venv/bin/python -r models/build.py)",
+				"options": {
+					"cwd": "${workspaceFolder:simon-says}"
+				},
+				"runOptions": {
+					"runOn": "folderOpen"
+				},
+				"presentation": {
+					"reveal": "silent"
+				},
+				"problemMatcher": []
+			}
+		]
+	}
+}
