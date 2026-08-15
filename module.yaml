@@ -1,7 +1,7 @@
 name: Simon Says
 repo: reinodovo-bomb/simon-says
 versions:
-  firmware: 0.5.0
+  firmware: 0.5.1
   manual: 0.1.1
   hardware: 0.0.0
   models: 0.0.0
