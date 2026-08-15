@@ -25,7 +25,7 @@ manual::json generate_json_for_code(uint16_t code) {
                                    "where you have to match the "
                                    "pattern that appears, except this one is a knockoff that "
                                    "was probably purchased at a dollar store.",
-                                   APP_VERSION);
+                                   MANUAL_VERSION);
 
   data["sections"] = manual::json::array();
   data["sections"].push_back(populateJson("even", rules.even_solved_modules));
